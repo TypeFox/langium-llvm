@@ -1,0 +1,61 @@
+{
+  "name": "ox",
+  "scopeName": "source.ox",
+  "fileTypes": [
+    ".ox"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "name": "keyword.control.ox",
+      "match": "\\b(and|boolean|else|false|for|fun|if|number|or|print|return|string|true|var|void|while)\\b"
+    },
+    {
+      "name": "string.quoted.double.ox",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "include": "#string-character-escape"
+        }
+      ]
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.ox",
+          "begin": "/\\*",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.ox"
+            }
+          },
+          "end": "\\*/",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.comment.ox"
+            }
+          }
+        },
+        {
+          "begin": "//",
+          "beginCaptures": {
+            "1": {
+              "name": "punctuation.whitespace.comment.leading.ox"
+            }
+          },
+          "end": "(?=$)",
+          "name": "comment.line.ox"
+        }
+      ]
+    },
+    "string-character-escape": {
+      "name": "constant.character.escape.ox",
+      "match": "\\\\(x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|u\\{[0-9A-Fa-f]+\\}|[0-2][0-7]{0,2}|3[0-6][0-7]?|37[0-7]?|[4-7][0-7]?|.|$)"
+    }
+  }
+}
