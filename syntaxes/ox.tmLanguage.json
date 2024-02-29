@@ -10,7 +10,7 @@
     },
     {
       "name": "keyword.control.ox",
-      "match": "\\b(and|boolean|else|false|for|fun|if|number|or|print|return|string|true|var|void|while)\\b"
+      "match": "\\b(and|boolean|else|false|for|fun|if|number|or|print|return|true|var|void|while)\\b"
     },
     {
       "name": "string.quoted.double.ox",

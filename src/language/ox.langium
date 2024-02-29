@@ -37,7 +37,7 @@ ExpressionBlock: '{'
 '}';
 
 VariableDeclaration returns NamedElement:
-    {infer VariableDeclaration} 'var' name=ID (':' type=TypeReference)? (assignment?='=' value=Expression)?
+    {infer VariableDeclaration} 'var' name=ID (':' type=TypeReference) (assignment?='=' value=Expression)?
 ;
 
 Expression:
@@ -82,7 +82,7 @@ FunctionDeclaration:
 
 Parameter: name=ID ':' type=TypeReference;
 
-TypeReference: primitive=("string" | "number" | "boolean" | "void");
+TypeReference: primitive=("number" | "boolean" | "void");
 
 type NamedElement = Parameter | FunctionDeclaration | VariableDeclaration;
 

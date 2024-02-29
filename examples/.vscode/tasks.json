@@ -1,0 +1,43 @@
+{
+    "tasks": [
+        {
+            "type": "process",
+            "label": "Compile to LLVM",
+            "command": "node",
+            "args": [
+                "../bin/cli.js",
+                "generate",
+                "${file}",
+                "-d",
+                "${fileDirname}${/}dbg"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build"
+        },
+        {
+            "type": "process",
+            "label": "Compile with Debug info",
+            "command": "clang",
+            "args": [
+                "-g",
+                "${fileDirname}${/}dbg${/}${fileBasenameNoExtension}.ll",
+                "-o",
+                "${fileDirname}${/}dbg${/}out"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Compile",
+            "dependsOn": [
+                "Compile to LLVM",
+                "Compile with Debug info"
+            ]
+        }
+   ],
+    "version": "2.0.0"
+}
