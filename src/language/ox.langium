@@ -61,20 +61,23 @@ Comparison infers Expression:
 Primary infers Expression:
     '(' Expression ')' |
     UnaryExpression |
-    StringExpression |
     BooleanExpression |
     NumberExpression |
     MemberCall;
 
-MemberCall infers Expression:
-    element=[NamedElement:ID];
+MemberCall:
+    element=[NamedElement:ID] (
+		explicitOperationCall?='('
+		(
+		    arguments+=Expression (',' arguments+=Expression)*
+		)?
+		')')?;
 
 UnaryExpression:
-   operator=('!' | '-' | '+') value=Expression
+   operator=('!' | '-') value=Expression
 ;
 
 NumberExpression: value=NUMBER;
-StringExpression: value=STRING;
 BooleanExpression: value?='true' | 'false';
 
 FunctionDeclaration:
@@ -89,7 +92,7 @@ type NamedElement = Parameter | FunctionDeclaration | VariableDeclaration;
 hidden terminal WS: /\s+/;
 terminal ID: /[_a-zA-Z][\w_]*/;
 terminal NUMBER returns number: /[0-9]+(\.[0-9]+)?/;
-terminal STRING: /"[^"]*"/;
+// terminal STRING: /"[^"]*"/;
 
 hidden terminal ML_COMMENT: /\/\*[\s\S]*?\*\//;
 hidden terminal SL_COMMENT: /\/\/[^\n\r]*/;

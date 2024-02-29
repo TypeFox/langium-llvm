@@ -1,14 +1,15 @@
 import llvm from "llvm-bindings";
 import { VariableDeclaration } from "../../language/generated/ast.js";
 import { generateExpression } from "./expr.js";
-import { DI, IR, getLoc } from "./util.js";
+import { DI, IR, getLoc, getScope } from "./util.js";
 
 export function generateVariableDeclaration(ir: IR, di: DI, varDecl: VariableDeclaration) {
     const { name, type, assignment, value: expr } = varDecl;
     const { line, character: col } = getLoc(varDecl);
-    const scope = di.scope[di.scope.length - 1];
+    const scope = getScope(di);
 
     const alloca = ir.builder.CreateAlloca(ir.basicTypes.get(type.primitive)!, null, name);
+    ir.namedValues.set(name, alloca);
     const diLocalVar = di.builder.createAutoVariable(scope, name, di.file, line, di.basicTypes.get(type.primitive)!);
 
     di.builder.insertDeclare(

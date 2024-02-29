@@ -27,3 +27,5 @@ export class OxValidator {
         }
     }
 }
+
+// todo: validate types of function parameters and function call arguments

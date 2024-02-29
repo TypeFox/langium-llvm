@@ -7,6 +7,8 @@ export type IR = {
     module: llvm.Module,
     builder: llvm.IRBuilder,
     basicTypes: Map<string, llvm.Type>,
+    namedValues: Map<string, llvm.AllocaInst>,
+    globalValues: Map<string, llvm.Constant>,
 }
 
 export type DI = {
@@ -21,7 +23,7 @@ export function initIR(filename: string): IR {
     const context = new llvm.LLVMContext();
     const module = new llvm.Module(filename, context);
     const builder = new llvm.IRBuilder(context);
-    return { context, module, builder, basicTypes: new Map() };
+    return { context, module, builder, basicTypes: new Map(), namedValues: new Map(), globalValues: new Map() };
 }
 
 export function initDI(ir: IR, filename: string): DI {
@@ -40,4 +42,8 @@ export function getLoc(node: AstNode): Position {
         line: pos.line + 1,
         character: pos.character
     };
+}
+
+export function getScope(di: DI): llvm.DIScope {
+    return di.scope[di.scope.length - 1];
 }

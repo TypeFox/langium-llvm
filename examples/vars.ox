@@ -4,3 +4,8 @@ var z: boolean = true;
 var w: number = 0;
 var a: boolean = false;
 
+fun returnSum(a: number, b: number): number {
+    return a + b;
+}
+
+var xx: number = returnSum(2, 3);
