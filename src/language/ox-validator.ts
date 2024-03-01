@@ -29,3 +29,5 @@ export class OxValidator {
 }
 
 // todo: validate types of function parameters and function call arguments
+// todo: implement typechecker
+// todo: veryfy return type and return expression

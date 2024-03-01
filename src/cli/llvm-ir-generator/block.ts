@@ -1,9 +1,9 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
 import { DI, IR, getLoc, getCurrScope } from "./util.js";
 import { generateVariableDeclaration } from "./var.js";
-import { generateExpression } from "./expr.js";
+import { generateExpression, generateMemberCall } from "./expr.js";
 
 export type BlockInfo = {
     name: string,
@@ -36,7 +36,10 @@ export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
         } else if (isPrintStatement(elem)) {
             generatePrintCall(ir, di, elem);
         } else { // if (isExpression(elem))
-            // skip
+            if (isMemberCall(elem)) {
+                generateMemberCall(ir, di, elem);
+            }
+            // skip otherwise
         }
     }
 

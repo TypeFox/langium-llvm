@@ -27,12 +27,24 @@ export function generateFunction(ir: IR, di: DI, funcDecl: FunctionDeclaration) 
 
     generateExpressionBlock(ir, di, body.elements, { name: 'entry', func, inputVars: parameters });
 
+    if (funcDecl.returnType.primitive === 'void') {
+        generateReturnVoid(ir, di, funcDecl);
+    }
+
     di.scope.pop();
 
     di.builder.finalizeSubprogram(debugInfoFuncSubprogram);
     if (llvm.verifyFunction(func)) {
         console.error(`Verifying the ${name} function failed`);
     }
+}
+
+function generateReturnVoid(ir: IR, di: DI, funcDecl: FunctionDeclaration) {
+    // generates an artificial `return 0` statement if ;
+    // it's not represented in the source code, and debugging points on a non-existing line
+    const { line: retLine, character: retCol } = funcDecl.$cstNode?.range.end!;
+    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, retLine, retCol, getCurrScope(di)));
+    ir.builder.CreateRetVoid();
 }
 
 function getSignature({ parameters, returnType }: FunctionDeclaration) {

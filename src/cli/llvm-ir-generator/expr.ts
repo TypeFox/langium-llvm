@@ -1,6 +1,6 @@
 
 import llvm from "llvm-bindings";
-import { BinaryExpression, Expression, MemberCall, isBinaryExpression, isBooleanExpression, isFunctionDeclaration, isMemberCall, isNumberExpression } from "../../language/generated/ast.js";
+import { BinaryExpression, Expression, MemberCall, UnaryExpression, isBooleanExpression, isFunctionDeclaration, isMemberCall, isNumberExpression, isUnaryExpression } from "../../language/generated/ast.js";
 import { DI, IR, getLoc, getCurrScope } from "./util.js";
 
 export function generateExpression(ir: IR, di: DI, expr: Expression): llvm.Value {
@@ -10,12 +10,24 @@ export function generateExpression(ir: IR, di: DI, expr: Expression): llvm.Value
         return ir.builder.getInt1(expr.value);
     } else if (isMemberCall(expr)) {
         return generateMemberCall(ir, di, expr);
-    } else if (isBinaryExpression(expr)) {
+    } else if (isUnaryExpression(expr)) {
+        return generateUnaryExpr(ir, di, expr);
+    } else {
         return generateBinaryExpr(ir, di, expr);
     }
+}
 
-    console.error(`Expression '${expr.$cstNode?.text}' is not supported.`);
-    process.exit(1);
+function generateUnaryExpr(ir: IR, di: DI, expr: UnaryExpression): llvm.Value {
+    const { line, col } = getLoc(expr);
+    const value = generateExpression(ir, di, expr.value);
+    const op = expr.operator;
+
+    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
+    if (op === '-') {
+        return ir.builder.CreateFNeg(value);
+    } else { // (op === '!')
+        return ir.builder.CreateNeg(value);
+    }
 }
 
 function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression) {
@@ -27,13 +39,39 @@ function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression) {
     ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
     if (op === '+') {
         return ir.builder.CreateFAdd(left, right);
+    } else if (op === '-') {
+        return ir.builder.CreateFSub(left, right);
+    } else if (op === '*') {
+        return ir.builder.CreateFMul(left, right);
+    } else if (op === '/') {
+        return ir.builder.CreateFDiv(left, right);
+    }
+
+    if (op === '<') {
+        return ir.builder.CreateFCmpOLT(left, right);
+    } else if (op === '<=') {
+        return ir.builder.CreateFCmpOLE(left, right);
+    } else if (op === '>') {
+        return ir.builder.CreateFCmpOGT(left, right);
+    } else if (op === '>=') {
+        return ir.builder.CreateFCmpOGE(left, right);
+    } else if (op === '==') {
+        return ir.builder.CreateFCmpOEQ(left, right);
+    } else if (op === '!=') {
+        return ir.builder.CreateFCmpONE(left, right);
+    }
+
+    if (op === 'and') {
+        return ir.builder.CreateAnd(left, right);
+    } else if (op === 'or') {
+        return ir.builder.CreateOr(left, right);
     }
 
     console.error(`Expression '${expr.$cstNode?.text}' is not supported.`);
     process.exit(1);
 }
 
-function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value {
+export function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value {
     const member = expr.element.ref!;
     const { line, col } = getLoc(expr);
     

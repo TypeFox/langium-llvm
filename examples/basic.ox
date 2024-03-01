@@ -55,25 +55,25 @@ print average;
 }
 // print "`x` isn't available in this scope";
 
-// Control flow
-// If branching
-if (average > 5) {
-    print 23;
-} else {
-    print -12;
-}
+// // Control flow
+// // If branching
+// if (average > 5) {
+//     print 23;
+// } else {
+//     print -12;
+// }
 
-// While loops
-var a: number = 1;
-while (a < 10) {
-    print a;
-    a = a + 1;
-}
+// // While loops
+// var a: number = 1;
+// while (a < 10) {
+//     print a;
+//     a = a + 1;
+// }
 
-// For loops
-for (var i: number = 1; i < 10; i = i + 1) {
-    print i;
-}
+// // For loops
+// for (var i: number = 1; i < 10; i = i + 1) {
+//     print i;
+// }
 
 // Functions
 fun printSum(a: number, b: number): void {
@@ -83,3 +83,5 @@ fun printSum(a: number, b: number): void {
 fun returnSum(a: number, b: number): number {
     return a + b;
 }
+
+printSum(3, 2);
