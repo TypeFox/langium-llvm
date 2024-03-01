@@ -1,7 +1,7 @@
 import llvm from "llvm-bindings";
 import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
-import { DI, IR, getLoc, getScope } from "./util.js";
+import { DI, IR, getLoc, getCurrScope } from "./util.js";
 import { generateVariableDeclaration } from "./var.js";
 import { generateExpression } from "./expr.js";
 
@@ -11,15 +11,18 @@ export type BlockInfo = {
     inputVars?: Parameter[]
 }
 
-export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[], { name, func, inputVars }: BlockInfo) {
+export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
+    { name, func, inputVars }: BlockInfo) {
+
     const entryBB = llvm.BasicBlock.Create(ir.context, name, func);
     ir.builder.SetInsertPoint(entryBB);
 
-    const backupNamedValues = new Map<string, llvm.AllocaInst>(ir.namedValues);
-    ir.namedValues = new Map<string, llvm.AllocaInst>();
+    const backupNamedValues = new Map<string, llvm.AllocaInst>(ir.nameToAlloca);
+    ir.nameToAlloca = new Map<string, llvm.AllocaInst>();
     if (func && inputVars) {
         for (let i = 0; i < inputVars.length; i++) {
-            generateParameter(ir, di, inputVars[i], i, func);
+            const alloca = generateParameter(ir, di, inputVars[i], i, func);
+            ir.nameToAlloca.set(inputVars[i].name, alloca);
         }
     }
 
@@ -33,34 +36,33 @@ export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[], {
         }
     }
 
-    ir.namedValues = backupNamedValues;
+    ir.nameToAlloca = backupNamedValues;
 }
 
-function generateParameter(ir: IR, di: DI, param: Parameter, i: number, func: llvm.Function) {
-    const { line, character: col } = getLoc(param);
-    const varName = param.name;
-    const varType = ir.basicTypes.get(param.type.primitive)!;
+function generateParameter(ir: IR, di: DI, param: Parameter, i: number, func: llvm.Function): llvm.AllocaInst {
+    const { name, type } = param;
+    const { line, col } = getLoc(param);
 
-    const alloca = ir.builder.CreateAlloca(varType, null, varName);
+    const alloca = ir.builder.CreateAlloca(ir.basicTypes.get(type.primitive)!, null, name);
     ir.builder.CreateStore(func.getArg(i), alloca);
-    ir.namedValues.set(varName, alloca);
 
     const diVarType = di.basicTypes.get(param.type.primitive)!;
-    const diLocalVar = di.builder.createParameterVariable(getScope(di), varName, i + 1, di.file, line, diVarType);
-
+    const diLocalVar = di.builder.createParameterVariable(getCurrScope(di), name, i + 1, di.file, line, diVarType);
     di.builder.insertDeclare(
         alloca, diLocalVar, di.builder.createExpression(),
-        llvm.DILocation.get(ir.context, line, col, getScope(di)), ir.builder.GetInsertBlock()!
+        llvm.DILocation.get(ir.context, line, col, getCurrScope(di)), ir.builder.GetInsertBlock()!
     );
+
+    return alloca;
 }
 
 function generateReturn(ir: IR, di: DI, ret: ReturnStatement) {
-    const { line, character: col } = getLoc(ret);
+    const { line, col } = getLoc(ret);
 
     const value = ret.value ?
         generateExpression(ir, di, ret.value) :
         ir.builder.getInt32(0);
 
-    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getScope(di)));
+    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
     ir.builder.CreateRet(value);
 }
