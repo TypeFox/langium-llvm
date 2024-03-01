@@ -1,5 +1,5 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
 import { DI, IR, getLoc, getCurrScope } from "./util.js";
 import { generateVariableDeclaration } from "./var.js";
@@ -33,6 +33,10 @@ export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
             generateFunction(ir, di, elem);
         } else if (isReturnStatement(elem)) {
             generateReturn(ir, di, elem);
+        } else if (isPrintStatement(elem)) {
+            generatePrintCall(ir, di, elem);
+        } else { // if (isExpression(elem))
+            // skip
         }
     }
 
@@ -65,4 +69,21 @@ function generateReturn(ir: IR, di: DI, ret: ReturnStatement) {
 
     ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
     ir.builder.CreateRet(value);
+}
+
+function generatePrintCall(ir: IR, di: DI, elem: PrintStatement) {
+    const printfFn = ir.module.getFunction('printf')!;
+    if (printfFn) {
+        const { line, col } = getLoc(elem);
+        const value = generateExpression(ir, di, elem.value);
+
+        const modifier = value.getType().getTypeID() === 13
+            ? ir.globalValues.get('integer_modifier')
+            : ir.globalValues.get('float_modifier');
+
+        ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
+        return ir.builder.CreateCall(printfFn, [modifier!, value]);
+    }
+
+    throw new Error('LLVM IR generation: \'printf\' was not found.');
 }

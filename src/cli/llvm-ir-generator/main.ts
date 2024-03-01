@@ -1,6 +1,6 @@
 import { FunctionDeclaration, isFunctionDeclaration, type OxProgram } from '../../language/generated/ast.js';
 import llvm from 'llvm-bindings';
-import { DI, IR, initDI, initIR } from './util.js';
+import { DI, IR, initDI, initIR, setupExternFunctions } from './util.js';
 import { generateExpressionBlock } from './block.js';
 import { initDITypes, initIRTypes } from './type.js';
 import { generateFunction } from './func.js';
@@ -8,7 +8,8 @@ import { generateFunction } from './func.js';
 export function generateLLVMIR(program: OxProgram, filename: string): string {
     const ir = initIR(filename);
     initIRTypes(ir);
-
+    setupExternFunctions(ir);
+    
     const di = initDI(ir, filename, 'Ox compiler');
     initDITypes(di);
 

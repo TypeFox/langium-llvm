@@ -8,9 +8,9 @@ false; // Not *not* false.
 12.34; // A decimal number.
 
 // Strings
-"I am a string";
-"";    // The empty string.
-"123"; // This is a string, not a number.
+// "I am a string";
+// "";    // The empty string.
+// "123"; // This is a string, not a number.
 
 // Expressions
 // Arithmetics
@@ -50,17 +50,17 @@ print average;
 
 // Blocks
 {
-    print "This is a new block";
+    // print "This is a new block";
     var x: number = 15;
 }
-print "`x` isn't available in this scope";
+// print "`x` isn't available in this scope";
 
 // Control flow
 // If branching
 if (average > 5) {
-    print "yes";
+    print 23;
 } else {
-    print "no";
+    print -12;
 }
 
 // While loops

@@ -43,8 +43,8 @@ function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value {
             ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
             return ir.builder.CreateCall(func, expr.arguments.map(a => generateExpression(ir, di, a)));
         }
-        console.error(`Function '${member.name}' is not in scope.`);
-        process.exit(1);
+        throw new Error(`LLVM IR generation: Function '${member.name}' is not in scope.`);
+
     } else { // if (isParameter(member) || isVariableDeclaration(member))
         const varName = member.name;
 
@@ -57,8 +57,6 @@ function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value {
         if (alloca) {
             return ir.builder.CreateLoad(alloca.getAllocatedType(), alloca);
         }
-
-        console.error(`Variable '${varName}' is not in scope.`);
-        process.exit(1);
+        throw new Error(`LLVM IR generation: Variable '${varName}' is not in scope.`);
     }
 }

@@ -42,6 +42,29 @@ export function initDI(ir: IR, filename: string, producer: string): DI {
     };
 }
 
+export function setupExternFunctions(ir: IR) {
+    const float_modifier_name = 'float_modifier';
+    const float_modifier = ir.builder.CreateGlobalStringPtr('%f\n', float_modifier_name, 0, ir.module);
+    ir.globalValues.set(float_modifier_name, float_modifier);
+
+    const integer_modifier_name = 'integer_modifier';
+    const integer_modifier = ir.builder.CreateGlobalStringPtr('%i\n', integer_modifier_name, 0, ir.module);
+    ir.globalValues.set(integer_modifier_name, integer_modifier);
+
+    const bytePtrTy: llvm.PointerType[] = [ir.builder.getInt8PtrTy()];
+    ir.module.getOrInsertFunction('printf', llvm.FunctionType.get(
+        /* return type */ ir.builder.getInt32Ty(),
+        /* foramt arg */  bytePtrTy,
+        /* vararg */      true
+    ));
+
+    ir.module.getOrInsertFunction('pow', llvm.FunctionType.get(
+        /* return type */ ir.builder.getDoubleTy(),
+        /* foramt arg */  [ir.builder.getDoubleTy(), ir.builder.getDoubleTy()],
+        /* vararg */      true
+    ));
+}
+
 export type Pos = {
     line: number,
     col: number
