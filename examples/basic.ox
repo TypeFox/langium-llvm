@@ -72,12 +72,12 @@ if (average > 5) {
     print -12;
 }
 
-// // While loops
-// var a: number = 1;
-// while (a < 10) {
-//     print a;
-//     a = a + 1;
-// }
+// While loops
+var a: number = 1;
+while (a < 10) {
+    print a;
+    a = a + 1;
+}
 
 // // For loops
 // for (var i: number = 1; i < 10; i = i + 1) {

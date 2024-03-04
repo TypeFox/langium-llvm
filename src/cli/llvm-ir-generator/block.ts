@@ -1,5 +1,5 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock, isIfStatement, IfStatement } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock, isIfStatement, IfStatement, isWhileStatement, WhileStatement } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
 import { DI, IR, getPos, getCurrScope, getDILocation } from "./util.js";
 import { generateAssignment, generateVariableDeclaration } from "./var.js";
@@ -41,6 +41,8 @@ export function generateBlock(ir: IR, di: DI, elements: OxElement[], funcInfo?: 
             generateBlock(ir, di, elem.elements);
         } else if (isIfStatement(elem)) {
             generateIfStatement(ir, di, elem);
+        } else if (isWhileStatement(elem)) {
+            generateWhileStatement(ir, di, elem);
         } else {
             throw new Error(`Statement ${elem.$cstNode?.text} is not supported.`);
         }
@@ -110,6 +112,30 @@ function generateIfStatement(ir: IR, di: DI, { block, condition, elseBlock }: If
         generateBlock(ir, di, elseBlock?.elements ?? []);
         ir.builder.CreateBr(mergeBB);
         elseBB = ir.builder.GetInsertBlock()!;
+
+        parentFunc.insertAfter(parentFunc.getExitBlock(), mergeBB);
+        ir.builder.SetInsertPoint(mergeBB);
+    }
+}
+
+function generateWhileStatement(ir: IR, di: DI, { block, condition }: WhileStatement) {
+    const parentFunc = ir.builder.GetInsertBlock()?.getParent();
+    if (parentFunc) {
+        let condBB = llvm.BasicBlock.Create(ir.context, 'whilecond', parentFunc!);
+        let loopBB = llvm.BasicBlock.Create(ir.context, 'loop');
+        const mergeBB = llvm.BasicBlock.Create(ir.context, 'whileend');
+
+        ir.builder.CreateBr(condBB);
+        ir.builder.SetInsertPoint(condBB);
+        const conditionValue = generateExpression(ir, di, condition);
+        ir.builder.CreateCondBr(conditionValue!, loopBB, mergeBB);
+        condBB = ir.builder.GetInsertBlock()!;
+
+        parentFunc.insertAfter(parentFunc.getExitBlock(), loopBB);
+        ir.builder.SetInsertPoint(loopBB);
+        generateBlock(ir, di, block.elements);
+        ir.builder.CreateBr(condBB);
+        loopBB = ir.builder.GetInsertBlock()!;
 
         parentFunc.insertAfter(parentFunc.getExitBlock(), mergeBB);
         ir.builder.SetInsertPoint(mergeBB);
