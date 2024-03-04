@@ -1,5 +1,5 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock, isIfStatement, IfStatement } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
 import { DI, IR, getPos, getCurrScope, getDILocation } from "./util.js";
 import { generateAssignment, generateVariableDeclaration } from "./var.js";
@@ -12,7 +12,6 @@ export type FuncInfo = {
 
 export function generateBlock(ir: IR, di: DI, elements: OxElement[], funcInfo?: FuncInfo) {
     const backupNamedValues = new Map<string, llvm.AllocaInst>(ir.nameToAlloca);
-    ir.nameToAlloca = new Map<string, llvm.AllocaInst>();
 
     if (funcInfo) {
         const { func, inputVars } = funcInfo;
@@ -40,6 +39,8 @@ export function generateBlock(ir: IR, di: DI, elements: OxElement[], funcInfo?: 
             // skip otherwise
         } else if (isBlock(elem)) {
             generateBlock(ir, di, elem.elements);
+        } else if (isIfStatement(elem)) {
+            generateIfStatement(ir, di, elem);
         } else {
             throw new Error(`Statement ${elem.$cstNode?.text} is not supported.`);
         }
@@ -87,4 +88,30 @@ function generatePrintCall(ir: IR, di: DI, elem: PrintStatement) {
     }
 
     throw new Error('LLVM IR generation: \'printf\' was not found.');
+}
+
+function generateIfStatement(ir: IR, di: DI, { block, condition, elseBlock }: IfStatement) {
+    const parentFunc = ir.builder.GetInsertBlock()?.getParent();
+    if (parentFunc) {
+        let thenBB = llvm.BasicBlock.Create(ir.context, 'then', parentFunc!);
+        let elseBB = llvm.BasicBlock.Create(ir.context, 'else');
+        const mergeBB = llvm.BasicBlock.Create(ir.context, 'ifend');
+
+        const conditionValue = generateExpression(ir, di, condition);
+        ir.builder.CreateCondBr(conditionValue!, thenBB, elseBB);
+
+        ir.builder.SetInsertPoint(thenBB);
+        generateBlock(ir, di, block.elements);
+        ir.builder.CreateBr(mergeBB);
+        thenBB = ir.builder.GetInsertBlock()!;
+
+        parentFunc.insertAfter(parentFunc.getExitBlock(), elseBB);
+        ir.builder.SetInsertPoint(elseBB);
+        generateBlock(ir, di, elseBlock?.elements ?? []);
+        ir.builder.CreateBr(mergeBB);
+        elseBB = ir.builder.GetInsertBlock()!;
+
+        parentFunc.insertAfter(parentFunc.getExitBlock(), mergeBB);
+        ir.builder.SetInsertPoint(mergeBB);
+    }
 }

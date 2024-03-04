@@ -61,13 +61,16 @@ print x;    // prints 1
 
 print x;    // prints 1
 
-// // Control flow
-// // If branching
-// if (average > 5) {
-//     print 23;
-// } else {
-//     print -12;
-// }
+// Control flow
+// If branching
+if (average > 5) {
+    print 23;
+    if (max < 30 and min > 3) {
+        min = min + 15;
+    }
+} else {
+    print -12;
+}
 
 // // While loops
 // var a: number = 1;
