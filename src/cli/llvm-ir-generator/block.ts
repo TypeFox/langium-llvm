@@ -1,8 +1,8 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
 import { DI, IR, getLoc, getCurrScope } from "./util.js";
-import { generateVariableDeclaration } from "./var.js";
+import { generateAssignment, generateVariableDeclaration } from "./var.js";
 import { generateExpression, generateMemberCall } from "./expr.js";
 
 export type BlockInfo = {
@@ -29,17 +29,21 @@ export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
     for (const elem of elements) {
         if (isVariableDeclaration(elem)) {
             generateVariableDeclaration(ir, di, elem);
+        } else if (isAssignmentStatement(elem)) {
+            generateAssignment(ir, di, elem);
         } else if (isFunctionDeclaration(elem)) {
             generateFunction(ir, di, elem);
         } else if (isReturnStatement(elem)) {
             generateReturn(ir, di, elem);
         } else if (isPrintStatement(elem)) {
             generatePrintCall(ir, di, elem);
-        } else { // if (isExpression(elem))
+        } else if (isExpression(elem)) {
             if (isMemberCall(elem)) {
                 generateMemberCall(ir, di, elem);
             }
             // skip otherwise
+        } else {
+            throw new Error(`Statement ${elem.$cstNode?.text} is not supported.`);
         }
     }
 

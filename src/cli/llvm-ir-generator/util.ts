@@ -65,12 +65,12 @@ export function setupExternFunctions(ir: IR) {
     ));
 }
 
-export type Pos = {
+export type Loc = {
     line: number,
     col: number
 }
 
-export function getLoc(node: AstNode): Pos {
+export function getLoc(node: AstNode): Loc {
     const pos = node.$cstNode!.range.start;
     return {
         line: pos.line + 1,

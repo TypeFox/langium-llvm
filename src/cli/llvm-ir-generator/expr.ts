@@ -30,13 +30,13 @@ function generateUnaryExpr(ir: IR, di: DI, expr: UnaryExpression): llvm.Value {
     }
 }
 
-function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression) {
-    const { line, col } = getLoc(expr);
+function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression): llvm.Value {
+    const loc = getLoc(expr);
     const left = generateExpression(ir, di, expr.left);
     const right = generateExpression(ir, di, expr.right);
     const op = expr.operator;
 
-    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
+    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, loc.line, loc.col, getCurrScope(di)));
     if (op === '+') {
         return ir.builder.CreateFAdd(left, right);
     } else if (op === '-') {
@@ -67,8 +67,7 @@ function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression) {
         return ir.builder.CreateOr(left, right);
     }
 
-    console.error(`Expression '${expr.$cstNode?.text}' is not supported.`);
-    process.exit(1);
+    throw new Error(`LLVM IR generation: No operator '${op}'.`);
 }
 
 export function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value {

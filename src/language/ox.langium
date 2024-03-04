@@ -10,6 +10,7 @@ OxElement:
     ForStatement |
     FunctionDeclaration |
     VariableDeclaration ';' | 
+    AssignmentStatement ';' |
     PrintStatement ';' | 
     ReturnStatement ';' | 
     Expression ';'
@@ -40,11 +41,12 @@ VariableDeclaration returns NamedElement:
     {infer VariableDeclaration} 'var' name=ID (':' type=TypeReference) (assignment?='=' value=Expression)?
 ;
 
-Expression:
-    Assignment;
+AssignmentStatement:
+    varRef=[VariableDeclaration:ID] '=' value=Expression
+;
 
-Assignment infers Expression:
-    Addition ({infer BinaryExpression.left=current} operator=('=') right=Addition)*;
+Expression:
+    Addition;
 
 Addition infers Expression:
     Multiplication ({infer BinaryExpression.left=current} operator=('+' | '-') right=Multiplication)*;
