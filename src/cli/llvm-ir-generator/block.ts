@@ -1,25 +1,21 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
-import { DI, IR, getLoc, getCurrScope } from "./util.js";
+import { DI, IR, getPos, getCurrScope, getDILocation } from "./util.js";
 import { generateAssignment, generateVariableDeclaration } from "./var.js";
 import { generateExpression, generateMemberCall } from "./expr.js";
 
-export type BlockInfo = {
-    name: string,
-    func?: llvm.Function,
-    inputVars?: Parameter[]
+export type FuncInfo = {
+    func: llvm.Function,
+    inputVars: Parameter[]
 }
 
-export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
-    { name, func, inputVars }: BlockInfo) {
-
-    const entryBB = llvm.BasicBlock.Create(ir.context, name, func);
-    ir.builder.SetInsertPoint(entryBB);
-
+export function generateBlock(ir: IR, di: DI, elements: OxElement[], funcInfo?: FuncInfo) {
     const backupNamedValues = new Map<string, llvm.AllocaInst>(ir.nameToAlloca);
     ir.nameToAlloca = new Map<string, llvm.AllocaInst>();
-    if (func && inputVars) {
+
+    if (funcInfo) {
+        const { func, inputVars } = funcInfo;
         for (let i = 0; i < inputVars.length; i++) {
             const alloca = generateParameter(ir, di, inputVars[i], i, func);
             ir.nameToAlloca.set(inputVars[i].name, alloca);
@@ -42,6 +38,8 @@ export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
                 generateMemberCall(ir, di, elem);
             }
             // skip otherwise
+        } else if (isBlock(elem)) {
+            generateBlock(ir, di, elem.elements);
         } else {
             throw new Error(`Statement ${elem.$cstNode?.text} is not supported.`);
         }
@@ -52,43 +50,39 @@ export function generateExpressionBlock(ir: IR, di: DI, elements: OxElement[],
 
 function generateParameter(ir: IR, di: DI, param: Parameter, i: number, func: llvm.Function): llvm.AllocaInst {
     const { name, type } = param;
-    const { line, col } = getLoc(param);
+    const { line } = getPos(param);
 
     const alloca = ir.builder.CreateAlloca(ir.basicTypes.get(type.primitive)!, null, name);
     ir.builder.CreateStore(func.getArg(i), alloca);
 
-    const diVarType = di.basicTypes.get(param.type.primitive)!;
-    const diLocalVar = di.builder.createParameterVariable(getCurrScope(di), name, i + 1, di.file, line, diVarType);
+    const diLocalVar = di.builder.createParameterVariable(getCurrScope(di), name, i + 1, di.file, line, di.basicTypes.get(param.type.primitive)!);
     di.builder.insertDeclare(
         alloca, diLocalVar, di.builder.createExpression(),
-        llvm.DILocation.get(ir.context, line, col, getCurrScope(di)), ir.builder.GetInsertBlock()!
+        getDILocation(ir, di, param), ir.builder.GetInsertBlock()!
     );
 
     return alloca;
 }
 
 function generateReturn(ir: IR, di: DI, ret: ReturnStatement) {
-    const { line, col } = getLoc(ret);
-
     const value = ret.value ?
         generateExpression(ir, di, ret.value) :
         ir.builder.getInt32(0);
 
-    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
+    ir.builder.SetCurrentDebugLocation(getDILocation(ir, di, ret));
     ir.builder.CreateRet(value);
 }
 
 function generatePrintCall(ir: IR, di: DI, elem: PrintStatement) {
     const printfFn = ir.module.getFunction('printf')!;
     if (printfFn) {
-        const { line, col } = getLoc(elem);
         const value = generateExpression(ir, di, elem.value);
 
         const modifier = value.getType().getTypeID() === 13
             ? ir.globalValues.get('integer_modifier')
             : ir.globalValues.get('float_modifier');
 
-        ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
+        ir.builder.SetCurrentDebugLocation(getDILocation(ir, di, elem));
         return ir.builder.CreateCall(printfFn, [modifier!, value]);
     }
 

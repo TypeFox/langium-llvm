@@ -18,6 +18,7 @@ var add: number = 23 + 41;
 var subtract: number = 13 - 4;
 var multiply: number = 13 * 4;
 var divide: number = 62 / 2;
+var fractional: number = 61 / 3;
 
 var negateMe: number = -add;
 
@@ -48,12 +49,17 @@ min = 5;
 // Printing
 print average;
 
+var x: boolean = true;
+print x;    // prints 1
+
 // Blocks
 {
     // print "This is a new block";
     var x: number = 15;
+    print x;    // prints 15
 }
-// print "`x` isn't available in this scope";
+
+print x;    // prints 1
 
 // // Control flow
 // // If branching
@@ -85,3 +91,5 @@ fun returnSum(a: number, b: number): number {
 }
 
 printSum(3, 2);
+
+print returnSum(32.3, 123.5);

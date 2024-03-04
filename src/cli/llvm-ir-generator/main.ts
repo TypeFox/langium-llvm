@@ -1,7 +1,7 @@
 import { FunctionDeclaration, isFunctionDeclaration, type OxProgram } from '../../language/generated/ast.js';
 import llvm from 'llvm-bindings';
 import { DI, IR, initDI, initIR, setupExternFunctions } from './util.js';
-import { generateExpressionBlock } from './block.js';
+import { generateBlock } from './block.js';
 import { initDITypes, initIRTypes } from './type.js';
 import { generateFunction } from './func.js';
 
@@ -44,14 +44,16 @@ function generateMainFunc(ir: IR, di: DI, program: OxProgram) {
 
     di.scope.push(debugInfoMainFuncSubprogram);
 
-    generateExpressionBlock(ir, di,
-        program.elements.filter(e => !isFunctionDeclaration(e)),
-        { name: 'entry', func: mainFunc }
+    const entryBB = llvm.BasicBlock.Create(ir.context, 'entry', mainFunc);
+    ir.builder.SetInsertPoint(entryBB);
+
+    generateBlock(ir, di,
+        program.elements.filter(e => !isFunctionDeclaration(e)), { func: mainFunc, inputVars: [] }
     );
 
     // generates an artificial `return 0` statement;
     // it's not represented in the source code, and debugging points on a non-existing line
-    const endLine = program.$cstNode?.range.end.line! + 2;
+    const endLine = program.$cstNode?.range.end.line! + 1;
     ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, endLine, 1, debugInfoMainFuncSubprogram));
     ir.builder.CreateRet(ir.builder.getInt32(0));
 

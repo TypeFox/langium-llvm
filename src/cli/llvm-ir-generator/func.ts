@@ -1,11 +1,11 @@
 import llvm from "llvm-bindings";
 import { FunctionDeclaration } from "../../language/generated/ast.js";
-import { DI, IR, getLoc, getCurrScope } from "./util.js";
-import { generateExpressionBlock } from "./block.js";
+import { DI, IR, getPos, getCurrScope } from "./util.js";
+import { generateBlock } from "./block.js";
 
 export function generateFunction(ir: IR, di: DI, funcDecl: FunctionDeclaration) {
     const { name, parameters, returnType, body } = funcDecl;
-    const { line } = getLoc(funcDecl);
+    const { line } = getPos(funcDecl);
     const signature = getSignature(funcDecl);
 
     const funcReturnType = ir.basicTypes.get(returnType.primitive)!;
@@ -25,8 +25,11 @@ export function generateFunction(ir: IR, di: DI, funcDecl: FunctionDeclaration) 
 
     di.scope.push(debugInfoFuncSubprogram);
 
-    generateExpressionBlock(ir, di, body.elements, { name: 'entry', func, inputVars: parameters });
+    const entryBB = llvm.BasicBlock.Create(ir.context, 'entry', func);
+    ir.builder.SetInsertPoint(entryBB);
 
+    generateBlock(ir, di, body.elements, { func, inputVars: parameters });
+    // if the return type is not void, the return statement was generated in the `generateBlock`
     if (funcDecl.returnType.primitive === 'void') {
         generateReturnVoid(ir, di, funcDecl);
     }

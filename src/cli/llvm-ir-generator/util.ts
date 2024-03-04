@@ -25,7 +25,7 @@ export function initIR(filename: string): IR {
     return { context, module, builder,
         basicTypes: new Map(),
         nameToAlloca: new Map(),
-        globalValues: new Map()
+        globalValues: new Map(),
     };
 }
 
@@ -65,12 +65,12 @@ export function setupExternFunctions(ir: IR) {
     ));
 }
 
-export type Loc = {
+export type Pos = {
     line: number,
     col: number
 }
 
-export function getLoc(node: AstNode): Loc {
+export function getPos(node: AstNode): Pos {
     const pos = node.$cstNode!.range.start;
     return {
         line: pos.line + 1,
@@ -80,4 +80,9 @@ export function getLoc(node: AstNode): Loc {
 
 export function getCurrScope(di: DI): llvm.DIScope {
     return di.scope[di.scope.length - 1];
+}
+
+export function getDILocation(ir: IR, di: DI, node: AstNode): llvm.DILocation {
+    const { line, col } = getPos(node);
+    return llvm.DILocation.get(ir.context, line, col, getCurrScope(di));
 }

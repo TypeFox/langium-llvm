@@ -1,9 +1,11 @@
 
 import llvm from "llvm-bindings";
 import { BinaryExpression, Expression, MemberCall, UnaryExpression, isBooleanExpression, isFunctionDeclaration, isMemberCall, isNumberExpression, isUnaryExpression } from "../../language/generated/ast.js";
-import { DI, IR, getLoc, getCurrScope } from "./util.js";
+import { DI, IR, getDILocation } from "./util.js";
 
 export function generateExpression(ir: IR, di: DI, expr: Expression): llvm.Value {
+    ir.builder.SetCurrentDebugLocation(getDILocation(ir, di, expr));
+
     if (isNumberExpression(expr)) {
         return llvm.ConstantFP.get(ir.builder.getDoubleTy(), expr.value);
     } else if (isBooleanExpression(expr)) {
@@ -18,11 +20,9 @@ export function generateExpression(ir: IR, di: DI, expr: Expression): llvm.Value
 }
 
 function generateUnaryExpr(ir: IR, di: DI, expr: UnaryExpression): llvm.Value {
-    const { line, col } = getLoc(expr);
     const value = generateExpression(ir, di, expr.value);
     const op = expr.operator;
 
-    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
     if (op === '-') {
         return ir.builder.CreateFNeg(value);
     } else { // (op === '!')
@@ -31,12 +31,10 @@ function generateUnaryExpr(ir: IR, di: DI, expr: UnaryExpression): llvm.Value {
 }
 
 function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression): llvm.Value {
-    const loc = getLoc(expr);
     const left = generateExpression(ir, di, expr.left);
     const right = generateExpression(ir, di, expr.right);
     const op = expr.operator;
 
-    ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, loc.line, loc.col, getCurrScope(di)));
     if (op === '+') {
         return ir.builder.CreateFAdd(left, right);
     } else if (op === '-') {
@@ -72,12 +70,11 @@ function generateBinaryExpr(ir: IR, di: DI, expr: BinaryExpression): llvm.Value 
 
 export function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value {
     const member = expr.element.ref!;
-    const { line, col } = getLoc(expr);
+    ir.builder.SetCurrentDebugLocation(getDILocation(ir, di, expr));
     
     if (isFunctionDeclaration(member)) {
         const func = ir.module.getFunction(member.name);
         if (func) {
-            ir.builder.SetCurrentDebugLocation(llvm.DILocation.get(ir.context, line, col, getCurrScope(di)));
             return ir.builder.CreateCall(func, expr.arguments.map(a => generateExpression(ir, di, a)));
         }
         throw new Error(`LLVM IR generation: Function '${member.name}' is not in scope.`);
@@ -94,6 +91,7 @@ export function generateMemberCall(ir: IR, di: DI, expr: MemberCall): llvm.Value
         if (alloca) {
             return ir.builder.CreateLoad(alloca.getAllocatedType(), alloca);
         }
+
         throw new Error(`LLVM IR generation: Variable '${varName}' is not in scope.`);
     }
 }

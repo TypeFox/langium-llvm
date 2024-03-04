@@ -4,7 +4,7 @@ entry OxProgram:
     elements+=OxElement*;
 
 OxElement:
-    ExpressionBlock | 
+    Block | 
     IfStatement |
     WhileStatement |
     ForStatement |
@@ -17,23 +17,23 @@ OxElement:
 ;
 
 IfStatement: 
-    'if' '(' condition=Expression ')' block=ExpressionBlock
-    ('else' elseBlock=ExpressionBlock)?
+    'if' '(' condition=Expression ')' block=Block
+    ('else' elseBlock=Block)?
 ;
 
 WhileStatement:
-    'while' '(' condition=Expression ')' block=ExpressionBlock
+    'while' '(' condition=Expression ')' block=Block
 ;
 
 ForStatement:
-    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=Expression? ')' block=ExpressionBlock
+    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=Expression? ')' block=Block
 ;
 
 PrintStatement: 'print' value=Expression;
 
 ReturnStatement: 'return' value=Expression?;
 
-ExpressionBlock: '{'
+Block: '{'
     elements+=OxElement*
 '}';
 
@@ -83,7 +83,7 @@ NumberExpression: value=NUMBER;
 BooleanExpression: value?='true' | 'false';
 
 FunctionDeclaration:
-    'fun' name=ID '(' (parameters+=Parameter (',' parameters+=Parameter)*)? ')' ':' returnType=TypeReference body=ExpressionBlock;
+    'fun' name=ID '(' (parameters+=Parameter (',' parameters+=Parameter)*)? ')' ':' returnType=TypeReference body=Block;
 
 Parameter: name=ID ':' type=TypeReference;
 
