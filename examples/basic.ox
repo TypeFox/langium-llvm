@@ -79,14 +79,18 @@ while (a < 10) {
     a = a + 1;
 }
 
-// // For loops
-// for (var i: number = 1; i < 10; i = i + 1) {
-//     print i;
-// }
+// For loops
+for (var i: number = 1; i < 10; i = i + 1) {
+    print i;
+}
+
+fun inc(a: number): number {
+    return a + 1;
+}
 
 // Functions
 fun printSum(a: number, b: number): void {
-    print a + b;
+    print inc(a) + inc(inc(b));
 }
 
 fun returnSum(a: number, b: number): number {

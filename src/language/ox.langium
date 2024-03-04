@@ -26,7 +26,7 @@ WhileStatement:
 ;
 
 ForStatement:
-    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=Expression? ')' block=Block
+    'for' '(' counter=VariableDeclaration? ';' condition=Expression? ';' execution=AssignmentStatement? ')' block=Block
 ;
 
 PrintStatement: 'print' value=Expression;

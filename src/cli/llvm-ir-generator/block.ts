@@ -1,5 +1,5 @@
 import llvm from "llvm-bindings";
-import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock, isIfStatement, IfStatement, isWhileStatement, WhileStatement } from "../../language/generated/ast.js";
+import { OxElement, ReturnStatement, Parameter, isFunctionDeclaration, isReturnStatement, isVariableDeclaration, isPrintStatement, PrintStatement, isMemberCall, isExpression, isAssignmentStatement, isBlock, isIfStatement, IfStatement, isWhileStatement, isForStatement, ForStatement, Expression, Block } from "../../language/generated/ast.js";
 import { generateFunction } from "./func.js";
 import { DI, IR, getPos, getCurrScope, getDILocation } from "./util.js";
 import { generateAssignment, generateVariableDeclaration } from "./var.js";
@@ -35,14 +35,17 @@ export function generateBlock(ir: IR, di: DI, elements: OxElement[], funcInfo?: 
         } else if (isExpression(elem)) {
             if (isMemberCall(elem)) {
                 generateMemberCall(ir, di, elem);
+            } else {
+                // skip
             }
-            // skip otherwise
         } else if (isBlock(elem)) {
             generateBlock(ir, di, elem.elements);
         } else if (isIfStatement(elem)) {
             generateIfStatement(ir, di, elem);
         } else if (isWhileStatement(elem)) {
-            generateWhileStatement(ir, di, elem);
+            generateWhileStatement(ir, di, elem.condition, elem.block);
+        } else if (isForStatement(elem)) {
+            generateForStatement(ir, di, elem);
         } else {
             throw new Error(`Statement ${elem.$cstNode?.text} is not supported.`);
         }
@@ -118,7 +121,8 @@ function generateIfStatement(ir: IR, di: DI, { block, condition, elseBlock }: If
     }
 }
 
-function generateWhileStatement(ir: IR, di: DI, { block, condition }: WhileStatement) {
+// don't use `WhileStatement` as an argument to reuse it for generation a for statement
+function generateWhileStatement(ir: IR, di: DI, condition: Expression | llvm.ConstantInt, block: Block) {
     const parentFunc = ir.builder.GetInsertBlock()?.getParent();
     if (parentFunc) {
         let condBB = llvm.BasicBlock.Create(ir.context, 'whilecond', parentFunc!);
@@ -127,7 +131,7 @@ function generateWhileStatement(ir: IR, di: DI, { block, condition }: WhileState
 
         ir.builder.CreateBr(condBB);
         ir.builder.SetInsertPoint(condBB);
-        const conditionValue = generateExpression(ir, di, condition);
+        const conditionValue = isExpression(condition) ? generateExpression(ir, di, condition) : condition;
         ir.builder.CreateCondBr(conditionValue!, loopBB, mergeBB);
         condBB = ir.builder.GetInsertBlock()!;
 
@@ -140,4 +144,16 @@ function generateWhileStatement(ir: IR, di: DI, { block, condition }: WhileState
         parentFunc.insertAfter(parentFunc.getExitBlock(), mergeBB);
         ir.builder.SetInsertPoint(mergeBB);
     }
+}
+
+function generateForStatement(ir: IR, di: DI, { block, condition, counter, execution }: ForStatement) {
+    if (counter && isVariableDeclaration(counter)) {
+        generateVariableDeclaration(ir, di, counter);
+    }
+
+    if (execution) {
+        block.elements.push(execution);
+    }
+
+    generateWhileStatement(ir, di, condition ?? ir.builder.getInt1(true), block);
 }
